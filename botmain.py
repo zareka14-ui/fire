@@ -31,7 +31,7 @@ ADMIN_ID = os.getenv("ADMIN_ID")
 PORT = int(os.getenv("PORT", 8080))
 
 # Ссылка на оферту и ID папок Google
-OFFER_LINK = "https://disk.yandex.ru/i/965-_UGNIPkaaQ" # Замените, если нужна новая оферта
+OFFER_LINK = "https://disk.yandex.ru/i/ncp_VeQ5Ub5gEQ" # Замените, если нужна новая оферта
 DRIVE_FOLDER_ID = "1aPzxYWdh085ZjQnr2KXs3O_HMCCWpfhn" # Замените на ID папки для чеков массажа
 SHEET_ID = "19vNVslHJEnkZCumR9e_sSc4M-YtqFWj6cLIwxojEZY0" # Замените на ID таблицы для массажа
 
