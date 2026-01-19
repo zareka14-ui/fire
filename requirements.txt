@@ -1,4 +1,4 @@
-aiogram==3.4.1
+aiogram>=3.4.0
 aiohttp
 gspread
 google-api-python-client
