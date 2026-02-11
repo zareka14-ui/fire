@@ -34,7 +34,8 @@ CONTRA_TEXT = (
     "— острых воспалительных процессах\n"
     "— повышенной температуре\n"
     "— кожных заболеваниях в стадии обострения\n"
-    "— серьёзных сердечно-сосудистых заболеваниях\n\n"
+    "— серьёзных сердечно-сосудистых заболеваниях\n"
+    "— наличии железных предметов снаружи (украшения) и внутри тела (металлические имплантанты, спицы и т.п.)\n\n"
     "Если у вас есть сомнения — обязательно проконсультируйтесь со специалистом."
 )
 
@@ -72,20 +73,23 @@ def contra_start_kb():
 
 def contra_accept_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✅ Я согласен(а)", callback_data="contra_ok")]
+        [InlineKeyboardButton(text="✅ Я ознакомлен с противопоказаниями", callback_data="contra_ok")]
     ])
 
 def services_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="💆 Спина + ноги — 5000₽", callback_data="service_5000")],
-        [InlineKeyboardButton(text="💆 Спина + ноги + грудь — 7000₽", callback_data="service_7000")],
-        [InlineKeyboardButton(text="🔥 Комплекс — 15000₽", callback_data="service_15000")]
+        [InlineKeyboardButton(text="💆 Спина + ноги + грудь — 7500₽", callback_data="service_7500")],
+        [InlineKeyboardButton(text="🔥 Комплекс: Спина + ноги + грудь + шея + затылок и голова — 9000₽", callback_data="service_9000")]
     ])
 
-def payment_kb():
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💳 Оплатить через Сбер", url="https://www.sberbank.ru")],
-    ])
+def payment_info_text():
+    return (
+        "💳 **Реквизиты для оплаты:**\n\n"
+        "Оплата через Сбер и Тбанк по телефону:\n"
+        "📞 **89124591439** (Екатерина)\n\n"
+        "После оплаты пришлите **скриншот чека**."
+    )
 
 # --- ХЭНДЛЕРЫ ---
 
@@ -121,17 +125,21 @@ async def get_city(message: types.Message, state: FSMContext):
     if message.text not in ["📍 Уфа", "📍 Ижевск"]:
         return
     await state.update_data(city=message.text.replace("📍 ", ""))
-    await message.answer("Напишите, пожалуйста, **удобный день и время** для записи (например: `15 марта после 18:00`):", parse_mode="Markdown")
-    await state.set_state(Form.waiting_for_day_time)
-
-@dp.message(Form.waiting_for_day_time, F.text)
-async def get_day_time(message: types.Message, state: FSMContext):
-    await state.update_data(day_time=message.text)
+    # Показываем противопоказания сразу после выбора города
     await message.answer(
         "Перед продолжением ознакомьтесь с противопоказаниями:",
         reply_markup=contra_start_kb()
     )
     await state.set_state(Form.waiting_for_contra_ok)
+
+@dp.message(Form.waiting_for_day_time, F.text)
+async def get_day_time(message: types.Message, state: FSMContext):
+    await state.update_data(day_time=message.text)
+    await message.answer(
+        "Выберите вариант услуги:",
+        reply_markup=services_kb()
+    )
+    await state.set_state(Form.waiting_for_service)
 
 @dp.callback_query(F.data == "read_contra")
 async def show_contra(callback: types.CallbackQuery):
@@ -146,27 +154,27 @@ async def show_contra(callback: types.CallbackQuery):
 async def contra_ok(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
     await callback.message.edit_text(
-        "Спасибо за подтверждение.\n\nВыберите вариант услуги:",
-        reply_markup=services_kb()
+        "Спасибо за подтверждение.\n\nНапишите, пожалуйста, **удобный день и время** для записи (например: `15 марта после 18:00`):",
+        parse_mode="Markdown"
     )
-    await state.set_state(Form.waiting_for_service)
+    await state.set_state(Form.waiting_for_day_time)
 
 @dp.callback_query(F.data.startswith("service_"))
 async def choose_service(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
     service_map = {
         "service_5000": "Спина + ноги — 5000₽",
-        "service_7000": "Спина + ноги + грудь — 7000₽",
-        "service_15000": "Комплекс — 15000₽"
+        "service_7500": "Спина + ноги + грудь — 7500₽",
+        "service_9000": "Комплекс: Спина + ноги + грудь + шея + затылок и голова — 9000₽"
     }
     service = service_map.get(callback.data)
     await state.update_data(service=service)
 
     text = (
-        f"Вы выбрали:\n**{service}**\n\n"
-        "Нажмите кнопку ниже для оплаты и после этого пришлите **скриншот чека**."
+        f"Вы выбрали:\n**{service}**\n\n" + 
+        payment_info_text()
     )
-    await callback.message.edit_text(text, parse_mode="Markdown", reply_markup=payment_kb())
+    await callback.message.edit_text(text, parse_mode="Markdown")
     await state.set_state(Form.waiting_for_payment_proof)
 
 @dp.message(Form.waiting_for_payment_proof, F.photo)
